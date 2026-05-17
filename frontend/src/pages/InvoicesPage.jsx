@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Table, Tag, Space, Button, Input, Modal, Form, Select, message } from 'antd';
 import { 
   PlusOutlined, 
@@ -8,99 +8,139 @@ import {
   ExclamationCircleOutlined,
   CloseOutlined
 } from '@ant-design/icons';
+import axios from 'axios';
 
-// Initial Mock Dataset for B2B SaaS Statements
-const INITIAL_INVOICES = [
-  { key: 'INV-1001', id: 'INV-1001', client: 'Acme Corp', project: 'Enterprise SaaS Dev', issued: '2026-05-15', due: '2026-06-15', amount: 4800, status: 'paid' },
-  { key: 'INV-1002', id: 'INV-1002', client: 'DesignCraft Ltd', project: 'Interactive 3D Assets', issued: '2026-05-04', due: '2026-06-04', amount: 3200, status: 'pending' },
-  { key: 'INV-1003', id: 'INV-1003', client: 'Sarah Connor', project: 'UI Consulting & Audits', issued: '2026-05-10', due: '2026-06-10', amount: 1500, status: 'paid' },
-  { key: 'INV-1004', id: 'INV-1004', client: 'Nova Corp', project: 'Mobile Frontend Development', issued: '2026-04-28', due: '2026-05-28', amount: 2400, status: 'pending' },
-  { key: 'INV-1005', id: 'INV-1005', client: 'SkyNet LLC', project: 'Machine Learning Infrastructure', issued: '2026-03-12', due: '2026-04-12', amount: 9800, status: 'overdue' },
-  { key: 'INV-1006', id: 'INV-1006', client: 'Supabase Inc', project: 'Database API Migration', issued: '2026-05-18', due: '2026-06-18', amount: 4200, status: 'pending' },
-  { key: 'INV-1007', id: 'INV-1007', client: 'Tailwind Labs', project: 'CSS Design System Strategy', issued: '2026-05-02', due: '2026-06-02', amount: 1900, status: 'paid' },
-  { key: 'INV-1008', id: 'INV-1008', client: 'Vercel Inc', project: 'Edge Functions Implementation', issued: '2026-04-15', due: '2026-05-15', amount: 5500, status: 'overdue' },
-  { key: 'INV-1009', id: 'INV-1009', client: 'Linear App', project: 'Task Engine Refactoring', issued: '2026-05-08', due: '2026-06-08', amount: 3700, status: 'paid' },
-  { key: 'INV-1010', id: 'INV-1010', client: 'Figma Corp', project: 'Vector Layout Tools consulting', issued: '2026-05-12', due: '2026-06-12', amount: 6200, status: 'pending' },
-];
+// Backend API Base Endpoint
+const API_URL = 'http://localhost:5001/api/invoices';
 
 export default function InvoicesPage() {
-  const [invoices, setInvoices] = useState(INITIAL_INVOICES);
+  const [invoices, setInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form] = Form.useForm();
 
+  // Fetch Invoices from Express + MongoDB backend
+  const fetchInvoices = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(API_URL);
+      if (response.data && response.data.success) {
+        setInvoices(response.data.data);
+        setError(null);
+      }
+    } catch (err) {
+      console.error('Failed to sync invoices:', err);
+      setError('Database offline. Render cached results.');
+      message.warning('Database sync failed! Running on local cache.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInvoices();
+  }, []);
+
   // Dynamic calculations based on live invoice list
-  const totalInvoiced = invoices.reduce((sum, item) => sum + item.amount, 0);
-  const totalPaid = invoices.filter(i => i.status === 'paid').reduce((sum, item) => sum + item.amount, 0);
-  const totalPending = invoices.filter(i => i.status === 'pending').reduce((sum, item) => sum + item.amount, 0);
-  const totalOverdue = invoices.filter(i => i.status === 'overdue').reduce((sum, item) => sum + item.amount, 0);
+  const totalInvoiced = invoices.reduce((sum, item) => sum + (item.amount || 0), 0);
+  const totalPaid = invoices.filter(i => i.status === 'paid').reduce((sum, item) => sum + (item.amount || 0), 0);
+  const totalPending = invoices.filter(i => i.status === 'pending').reduce((sum, item) => sum + (item.amount || 0), 0);
+  const totalOverdue = invoices.filter(i => i.status === 'overdue').reduce((sum, item) => sum + (item.amount || 0), 0);
 
   // Filters logic
   const filteredInvoices = invoices.filter((item) => {
     const matchesSearch = 
-      item.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.project.toLowerCase().includes(searchQuery.toLowerCase());
+      (item.clientName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.invoiceNumber || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.project || '').toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   // Handle Form Submission inside modal
-  const handleCreateInvoice = (values) => {
-    const newInvoice = {
-      key: `INV-${Date.now()}`,
-      id: `INV-${Math.floor(1000 + Math.random() * 9000)}`,
-      client: values.client,
-      project: values.project || 'General Consulting',
-      issued: values.issued || new Date().toISOString().split('T')[0],
-      due: values.due || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      amount: parseFloat(values.amount),
-      status: values.status,
-    };
+  const handleCreateInvoice = async (values) => {
+    try {
+      // Generate a dynamic Invoice Number
+      const invoiceNumber = `INV-${Math.floor(1000 + Math.random() * 9000)}`;
+      
+      const payload = {
+        invoiceNumber,
+        clientName: values.client,
+        project: values.project || 'General Consulting',
+        amount: parseFloat(values.amount),
+        dueDate: values.due || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        status: values.status || 'pending',
+      };
 
-    setInvoices([newInvoice, ...invoices]);
-    setIsModalOpen(false);
-    form.resetFields();
-    message.success(`Successfully issued invoice ${newInvoice.id} for $${newInvoice.amount.toLocaleString()}!`);
+      const response = await axios.post(API_URL, payload);
+      if (response.data && response.data.success) {
+        setInvoices([response.data.data, ...invoices]);
+        message.success(`Successfully issued invoice ${payload.invoiceNumber} for $${payload.amount.toLocaleString()}!`);
+      }
+      setIsModalOpen(false);
+      form.resetFields();
+    } catch (err) {
+      console.error('Failed to issue invoice:', err);
+      message.error(err.response?.data?.message || 'Failed to sync new invoice statement.');
+    }
+  };
+
+  // Handle Deleting an Invoice from live backend
+  const handleDeleteInvoice = async (id, invoiceNumber) => {
+    try {
+      const response = await axios.delete(`${API_URL}/${id}`);
+      if (response.data && response.data.success) {
+        setInvoices(invoices.filter(i => i._id !== id));
+        message.success(`Invoice ${invoiceNumber} deleted successfully.`);
+      }
+    } catch (err) {
+      console.error('Failed to remove invoice:', err);
+      message.error('Failed to remove invoice statement.');
+    }
   };
 
   const columns = [
     {
       title: 'Invoice ID',
-      dataIndex: 'id',
-      key: 'id',
+      dataIndex: 'invoiceNumber',
+      key: 'invoiceNumber',
       render: (text) => <strong className="text-zinc-200 text-xs font-mono">{text}</strong>,
     },
     {
       title: 'Client',
-      dataIndex: 'client',
-      key: 'client',
+      dataIndex: 'clientName',
+      key: 'clientName',
       render: (text, record) => (
         <div className="flex flex-col">
           <span className="text-zinc-250 text-xs font-bold">{text}</span>
-          <span className="text-[10px] text-zinc-500">{record.project}</span>
+          <span className="text-[10px] text-zinc-500">{record.project || 'General Consulting'}</span>
         </div>
       ),
     },
     {
       title: 'Issued Date',
-      dataIndex: 'issued',
-      key: 'issued',
-      render: (text) => <span className="text-zinc-450 text-xs font-medium">{text}</span>,
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      render: (_, record) => {
+        const date = record.createdAt ? new Date(record.createdAt) : new Date();
+        return <span className="text-zinc-450 text-xs font-medium">{date.toISOString().split('T')[0]}</span>;
+      },
     },
     {
       title: 'Due Date',
-      dataIndex: 'due',
-      key: 'due',
+      dataIndex: 'dueDate',
+      key: 'dueDate',
       render: (text) => <span className="text-zinc-450 text-xs font-medium">{text}</span>,
     },
     {
       title: 'Amount',
       dataIndex: 'amount',
       key: 'amount',
-      render: (amount) => <strong className="text-zinc-200 text-xs font-bold">${amount.toLocaleString()}</strong>,
+      render: (amount) => <strong className="text-zinc-200 text-xs font-bold">${amount ? amount.toLocaleString() : '0'}</strong>,
     },
     {
       title: 'Status',
@@ -137,15 +177,15 @@ export default function InvoicesPage() {
         <Space size="middle">
           <button 
             className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer border-none bg-transparent"
-            onClick={() => message.info(`Viewing details for statement ${record.id}`)}
+            onClick={() => message.info(`Viewing details for statement ${record.invoiceNumber}`)}
           >
             View
           </button>
           <button 
-            className="text-xs text-zinc-500 hover:text-zinc-300 font-semibold cursor-pointer border-none bg-transparent"
-            onClick={() => message.success(`Downloaded Invoice PDF ${record.id}!`)}
+            className="text-xs text-rose-500 hover:text-rose-450 font-semibold cursor-pointer border-none bg-transparent"
+            onClick={() => handleDeleteInvoice(record._id, record.invoiceNumber)}
           >
-            Download
+            Delete
           </button>
         </Space>
       ),
@@ -181,71 +221,99 @@ export default function InvoicesPage() {
             boxShadow: '0 4px 12px rgba(255, 255, 255, 0.1)'
           }}
         >
-          Create Invoice
+          Issue Invoice
         </Button>
       </div>
 
-      {/* Invoice Overview Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
-        {/* Total Invoiced */}
-        <div className="bg-[#121214] border border-zinc-850 rounded-xl p-4 sm:p-5 flex flex-col relative overflow-hidden shadow-sm hover-card-trigger">
+      {/* Sync Warning banner if DB Offline */}
+      {error && (
+        <div className="bg-amber-955/20 border border-amber-900/60 rounded-xl px-4 py-3 text-xs text-amber-300 flex items-center gap-2">
+          <ExclamationCircleOutlined className="text-sm" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* Financial Overview Metrics Cards Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-[#121214] border border-zinc-850 hover-card-trigger rounded-2xl p-4 flex flex-col gap-1 transition-all duration-300">
           <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Total Invoiced</span>
-          <span className="font-display text-xl font-bold text-white mt-1.5">${totalInvoiced.toLocaleString()}</span>
+          <span className="text-lg md:text-xl font-display font-black text-white mt-1">
+            ${totalInvoiced.toLocaleString()}
+          </span>
+          <span className="text-[9px] text-zinc-500">Gross billing statements</span>
         </div>
-        {/* Total Paid */}
-        <div className="bg-[#121214] border border-zinc-850 rounded-xl p-4 sm:p-5 flex flex-col relative overflow-hidden shadow-sm hover-card-trigger">
-          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Payments Settled</span>
-          <span className="font-display text-xl font-bold text-emerald-400 mt-1.5">${totalPaid.toLocaleString()}</span>
+
+        <div className="bg-[#121214] border border-zinc-850 hover-card-trigger rounded-2xl p-4 flex flex-col gap-1 transition-all duration-300">
+          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider text-emerald-500">Total Settled</span>
+          <span className="text-lg md:text-xl font-display font-black text-emerald-400 mt-1">
+            ${totalPaid.toLocaleString()}
+          </span>
+          <span className="text-[9px] text-zinc-500">Cleared balance</span>
         </div>
-        {/* Total Pending */}
-        <div className="bg-[#121214] border border-zinc-850 rounded-xl p-4 sm:p-5 flex flex-col relative overflow-hidden shadow-sm hover-card-trigger">
-          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Outstanding</span>
-          <span className="font-display text-xl font-bold text-amber-400 mt-1.5">${totalPending.toLocaleString()}</span>
+
+        <div className="bg-[#121214] border border-zinc-850 hover-card-trigger rounded-2xl p-4 flex flex-col gap-1 transition-all duration-300">
+          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider text-amber-500">Total Pending</span>
+          <span className="text-lg md:text-xl font-display font-black text-amber-400 mt-1">
+            ${totalPending.toLocaleString()}
+          </span>
+          <span className="text-[9px] text-zinc-500">Awaiting clearance</span>
         </div>
-        {/* Total Overdue */}
-        <div className="bg-[#121214] border border-zinc-850 rounded-xl p-4 sm:p-5 flex flex-col relative overflow-hidden shadow-sm hover-card-trigger">
-          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Overdue Balance</span>
-          <span className="font-display text-xl font-bold text-rose-450 mt-1.5">${totalOverdue.toLocaleString()}</span>
+
+        <div className="bg-[#121214] border border-zinc-850 hover-card-trigger rounded-2xl p-4 flex flex-col gap-1 transition-all duration-300">
+          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider text-rose-500">Total Overdue</span>
+          <span className="text-lg md:text-xl font-display font-black text-rose-400 mt-1">
+            ${totalOverdue.toLocaleString()}
+          </span>
+          <span className="text-[9px] text-zinc-500">Outstanding statements</span>
         </div>
       </div>
 
-      {/* Main Billing Table List Card */}
-      <div className="bg-[#121214] border border-zinc-850 rounded-xl p-4 sm:p-5 md:p-6 shadow-sm flex flex-col overflow-hidden hover-card-trigger">
+      {/* Main invoices controls card */}
+      <div className="bg-[#121214] border border-zinc-850 rounded-2xl p-4 sm:p-5 md:p-6 hover-card-trigger transition-all duration-300 flex flex-col gap-4">
         
-        {/* Sub-card search actions header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-          <div className="flex items-center bg-[#18181b] border border-zinc-850 rounded-lg px-3 py-1.5 w-full sm:w-64 gap-2">
-            <SearchOutlined className="text-zinc-500 text-sm" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-transparent border-none outline-none text-xs text-zinc-200 placeholder-zinc-500 w-full"
-              placeholder="Search invoices or clients..."
-            />
-          </div>
-
-          {/* Vercel-style status filter tab row */}
-          <div className="flex bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-850 rounded-lg p-0.5 gap-0.5 self-start sm:self-center">
-            {['all', 'paid', 'pending', 'overdue'].map((status) => (
+        {/* Filtering & Searching Controls Bar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          
+          {/* Quick status tabs (Vercel Style) */}
+          <div className="flex bg-[#18181b] border border-zinc-850 p-1 rounded-lg self-start">
+            {['all', 'paid', 'pending', 'overdue'].map((tab) => (
               <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`border-none px-3 py-1.5 text-xs font-semibold rounded-md cursor-pointer transition-all capitalize ${
-                  statusFilter === status
-                    ? 'bg-white dark:bg-zinc-900 text-white dark:text-zinc-100 shadow-sm'
-                    : 'bg-transparent text-slate-500 dark:text-zinc-400 hover:text-zinc-200'
+                key={tab}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold capitalize transition-all cursor-pointer border-none ${
+                  statusFilter === tab 
+                    ? 'bg-[#27272a] border-[#3f3f46] text-white' 
+                    : 'text-zinc-500 hover:text-zinc-350 bg-transparent'
                 }`}
+                onClick={() => setStatusFilter(tab)}
               >
-                {status}
+                {tab}
               </button>
             ))}
           </div>
+
+          {/* Search query input */}
+          <Input 
+            prefix={<SearchOutlined className="text-zinc-500 text-xs mr-1" />}
+            placeholder="Search by client, ID, or project..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full md:max-w-xs h-9 text-xs"
+            style={{
+              backgroundColor: '#18181b',
+              borderColor: '#27272a',
+              color: 'white',
+              borderRadius: '8px',
+              fontSize: '12px'
+            }}
+          />
         </div>
 
+        {/* Ant Design Data Table */}
         <Table 
           columns={columns} 
           dataSource={filteredInvoices} 
+          loading={loading}
+          rowKey="_id"
           scroll={{ x: 680 }}
           pagination={{
             pageSize: 6,
