@@ -33,7 +33,16 @@ FlowBooks is a modern, high-density **B2B SaaS financial ledger and invoice mana
 
 ```text
 FlowBooks/
-├── frontend/
+├── backend/                 # Node.js + Express.js + MongoDB API Service
+│   ├── config/              # Database connection pools (db.js)
+│   ├── controllers/         # MVC Business controllers (transactionController, invoiceController)
+│   ├── middleware/          # Centralized Express error boundary middleware
+│   ├── models/              # Mongoose data schema structures (Transaction, Invoice)
+│   ├── routes/              # Express API router bindings
+│   ├── .env                 # Server configuration variables
+│   ├── package.json         # Backend manifest
+│   └── server.js            # Express application boot entrypoint
+├── frontend/                # React.js + Vite Client Dashboard
 │   ├── public/              # Global brand assets, favicons, and vector icons
 │   ├── src/
 │   │   ├── components/      # Reusable visual components
@@ -58,34 +67,35 @@ FlowBooks/
 
 ## ⚙️ Installation & Local Setup
 
-Get FlowBooks running locally on your machine in under three minutes:
+Get the entire FlowBooks MERN application running locally on your machine in under three minutes:
 
 ### 1. Prerequisites
-Ensure you have **Node.js (v18+)** and **npm (v9+)** installed on your operating system.
+Ensure you have **Node.js (v18+)**, **npm (v9+)**, and a local **MongoDB** database instance running on your operating system.
 
 ### 2. Clone the Repository
 ```bash
 git clone https://github.com/CrypticAarya/FlowBooks.git
-cd FlowBooks/frontend
+cd FlowBooks
 ```
 
-### 3. Install Dependencies
+
+### 3. Install & Start the Backend API
+In a new terminal window, navigate to the `backend` directory and boot up the development server:
 ```bash
+cd backend
 npm install
+npm run dev
 ```
+The server will connect to MongoDB and start listening on **`http://localhost:5000`** with dynamic hot-reload enabled by nodemon!
 
-### 4. Boot Local Development Server
+### 4. Install & Start the Frontend Client
+In another terminal window, navigate to the `frontend` directory and boot up the client dev server:
 ```bash
+cd frontend
+npm install
 npm run dev
 ```
 Open **`http://localhost:5173`** in your browser to experience the HMR-powered client!
-
-### 5. Build for Production
-To compile and test the minified production bundles:
-```bash
-npm run build
-npm run preview
-```
 
 ---
 
