@@ -1,7 +1,9 @@
 import express from 'express';
 import { 
   getInvoices, 
+  getInvoiceById,
   createInvoice, 
+  updateInvoice,
   deleteInvoice 
 } from '../controllers/invoiceController.js';
 
@@ -12,6 +14,8 @@ router.route('/')
   .post(createInvoice);
 
 router.route('/:id')
+  .get(getInvoiceById)
+  .put(updateInvoice)
   .delete(deleteInvoice);
 
 export default router;

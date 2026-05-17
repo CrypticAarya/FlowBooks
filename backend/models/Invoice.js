@@ -2,9 +2,9 @@ import mongoose from 'mongoose';
 
 const invoiceSchema = new mongoose.Schema(
   {
-    invoiceId: {
+    invoiceNumber: {
       type: String,
-      required: [true, 'Invoice ID is required'],
+      required: [true, 'Invoice number is required'],
       unique: true,
       trim: true,
     },
