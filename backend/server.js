@@ -1,46 +1,60 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+
 import { connectDB } from './config/db.js';
+
 import transactionRoutes from './routes/transactionRoutes.js';
 import invoiceRoutes from './routes/invoiceRoutes.js';
+
 import { errorHandler } from './middleware/errorHandler.js';
 
-// Load environmental variables
+// Load environment variables
 dotenv.config();
 
-// Connect to MongoDB Database
+// Connect MongoDB
 connectDB();
 
 const app = express();
 
-// Standard request body parsers and cross-origin resource sharing
-app.use(cors());
+// Middleware
+app.use(
+  cors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 
-// Basic sanity API ping route
+// Test Route
 app.get('/', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'FlowBooks API Server is active and operational!',
+    message: 'FlowBooks API Server is running successfully!',
   });
 });
 
-// RESTful Route bindings
+// API Routes
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/invoices', invoiceRoutes);
 
-// Centralized error interceptor middleware
+// Global Error Handler
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5001;
 
+// Start Server
 const server = app.listen(PORT, () => {
-  console.log(`🚀 FlowBooks Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  console.log(
+    `🚀 FlowBooks Server running in ${process.env.NODE_ENV || 'development'
+    } mode on port ${PORT}`
+  );
 });
 
-// Graceful rejection handler
+// Handle Unhandled Promise Rejections
 process.on('unhandledRejection', (err) => {
   console.error(`💥 Unhandled Promise Rejection: ${err.message}`);
+
   server.close(() => process.exit(1));
 });

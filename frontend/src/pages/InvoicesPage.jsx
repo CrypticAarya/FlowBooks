@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Tag, Space, Button, Input, Modal, Form, Select, message } from 'antd';
-import { 
-  PlusOutlined, 
-  SearchOutlined, 
+import {
+  PlusOutlined,
+  SearchOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   ExclamationCircleOutlined,
@@ -52,11 +52,11 @@ export default function InvoicesPage() {
 
   // Filters logic
   const filteredInvoices = invoices.filter((item) => {
-    const matchesSearch = 
+    const matchesSearch =
       (item.clientName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (item.invoiceNumber || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (item.project || '').toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -65,8 +65,8 @@ export default function InvoicesPage() {
   const handleCreateInvoice = async (values) => {
     try {
       // Generate a dynamic Invoice Number
-      const invoiceNumber = `INV-${Math.floor(1000 + Math.random() * 9000)}`;
-      
+      const invoiceNumber = `INV-${Date.now()}`;
+
       const payload = {
         invoiceNumber,
         clientName: values.client,
@@ -160,9 +160,9 @@ export default function InvoicesPage() {
           icon = <ExclamationCircleOutlined />;
         }
         return (
-          <Tag 
-            icon={icon} 
-            color={color} 
+          <Tag
+            icon={icon}
+            color={color}
             className="border-none rounded font-bold text-[9px] uppercase px-2 py-0.5"
           >
             {status}
@@ -175,13 +175,13 @@ export default function InvoicesPage() {
       key: 'actions',
       render: (_, record) => (
         <Space size="middle">
-          <button 
+          <button
             className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer border-none bg-transparent"
             onClick={() => message.info(`Viewing details for statement ${record.invoiceNumber}`)}
           >
             View
           </button>
-          <button 
+          <button
             className="text-xs text-rose-500 hover:text-rose-450 font-semibold cursor-pointer border-none bg-transparent"
             onClick={() => handleDeleteInvoice(record._id, record.invoiceNumber)}
           >
@@ -194,7 +194,7 @@ export default function InvoicesPage() {
 
   return (
     <div className="flex flex-col gap-5 md:gap-6 animate-fade-in">
-      
+
       {/* Title Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -205,9 +205,9 @@ export default function InvoicesPage() {
             Create, issue, and manage clients financial statements.
           </p>
         </div>
-        
-        <Button 
-          type="primary" 
+
+        <Button
+          type="primary"
           icon={<PlusOutlined />}
           onClick={() => setIsModalOpen(true)}
           style={{
@@ -270,20 +270,19 @@ export default function InvoicesPage() {
 
       {/* Main invoices controls card */}
       <div className="bg-[#121214] border border-zinc-850 rounded-2xl p-4 sm:p-5 md:p-6 hover-card-trigger transition-all duration-300 flex flex-col gap-4">
-        
+
         {/* Filtering & Searching Controls Bar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          
+
           {/* Quick status tabs (Vercel Style) */}
           <div className="flex bg-[#18181b] border border-zinc-850 p-1 rounded-lg self-start">
             {['all', 'paid', 'pending', 'overdue'].map((tab) => (
               <button
                 key={tab}
-                className={`px-3 py-1.5 rounded-md text-xs font-bold capitalize transition-all cursor-pointer border-none ${
-                  statusFilter === tab 
-                    ? 'bg-[#27272a] border-[#3f3f46] text-white' 
+                className={`px-3 py-1.5 rounded-md text-xs font-bold capitalize transition-all cursor-pointer border-none ${statusFilter === tab
+                    ? 'bg-[#27272a] border-[#3f3f46] text-white'
                     : 'text-zinc-500 hover:text-zinc-350 bg-transparent'
-                }`}
+                  }`}
                 onClick={() => setStatusFilter(tab)}
               >
                 {tab}
@@ -292,9 +291,9 @@ export default function InvoicesPage() {
           </div>
 
           {/* Search query input */}
-          <Input 
+          <Input
             prefix={<SearchOutlined className="text-zinc-500 text-xs mr-1" />}
-            placeholder="Search by client, ID, or project..." 
+            placeholder="Search by client, ID, or project..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full md:max-w-xs h-9 text-xs"
@@ -309,9 +308,9 @@ export default function InvoicesPage() {
         </div>
 
         {/* Ant Design Data Table */}
-        <Table 
-          columns={columns} 
-          dataSource={filteredInvoices} 
+        <Table
+          columns={columns}
+          dataSource={filteredInvoices}
           loading={loading}
           rowKey="_id"
           scroll={{ x: 680 }}
@@ -351,8 +350,8 @@ export default function InvoicesPage() {
             rules={[{ required: true, message: 'Please provide a client name' }]}
             style={{ marginBottom: '12px' }}
           >
-            <Input 
-              placeholder="e.g. Supabase Inc" 
+            <Input
+              placeholder="e.g. Supabase Inc"
               style={{ backgroundColor: '#18181b', borderColor: '#27272a', color: 'white', borderRadius: '8px', height: '38px', fontSize: '12px' }}
             />
           </Form.Item>
@@ -363,8 +362,8 @@ export default function InvoicesPage() {
             label={<span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Project / Description</span>}
             style={{ marginBottom: '12px' }}
           >
-            <Input 
-              placeholder="e.g. Database API Setup" 
+            <Input
+              placeholder="e.g. Database API Setup"
               style={{ backgroundColor: '#18181b', borderColor: '#27272a', color: 'white', borderRadius: '8px', height: '38px', fontSize: '12px' }}
             />
           </Form.Item>
@@ -377,10 +376,10 @@ export default function InvoicesPage() {
               rules={[{ required: true, message: 'Please specify an amount' }]}
               style={{ marginBottom: '12px' }}
             >
-              <Input 
+              <Input
                 type="number"
                 min="1"
-                placeholder="2500" 
+                placeholder="2500"
                 style={{ backgroundColor: '#18181b', borderColor: '#27272a', color: 'white', borderRadius: '8px', height: '38px', fontSize: '12px' }}
               />
             </Form.Item>
@@ -410,7 +409,7 @@ export default function InvoicesPage() {
               label={<span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Issue Date</span>}
               style={{ marginBottom: '16px' }}
             >
-              <input 
+              <input
                 type="date"
                 defaultValue={new Date().toISOString().split('T')[0]}
                 className="w-full bg-[#18181b] border border-zinc-800 text-zinc-200 rounded-lg px-3 h-[38px] text-xs outline-none focus:border-indigo-500"
@@ -423,7 +422,7 @@ export default function InvoicesPage() {
               label={<span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Due Date</span>}
               style={{ marginBottom: '16px' }}
             >
-              <input 
+              <input
                 type="date"
                 defaultValue={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
                 className="w-full bg-[#18181b] border border-zinc-800 text-zinc-200 rounded-lg px-3 h-[38px] text-xs outline-none focus:border-indigo-500"
@@ -433,10 +432,10 @@ export default function InvoicesPage() {
 
           {/* Action trigger button */}
           <Form.Item style={{ marginBottom: 0 }}>
-            <Button 
-              type="primary" 
-              htmlType="submit" 
-              block 
+            <Button
+              type="primary"
+              htmlType="submit"
+              block
               style={{
                 backgroundColor: 'white',
                 borderColor: 'white',
