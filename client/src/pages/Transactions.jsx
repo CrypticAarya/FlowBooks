@@ -36,7 +36,7 @@ export default function Transactions() {
     try {
       setLoading(true)
       setError('')
-      const data = await apiFetch('/transactions')
+      const data = await apiFetch('/api/transactions')
       setTransactions(data)
     } catch (err) {
       setError(err.message)
@@ -97,7 +97,7 @@ export default function Transactions() {
 
     try {
       if (editingId) {
-        const updated = await apiFetch(`/transactions/${editingId}`, {
+        const updated = await apiFetch(`/api/transactions/${editingId}`, {
           method: 'PUT',
           body: JSON.stringify(body),
         })
@@ -106,7 +106,7 @@ export default function Transactions() {
         )
         toast.success('Transaction updated')
       } else {
-        const created = await apiFetch('/transactions', {
+        const created = await apiFetch('/api/transactions', {
           method: 'POST',
           body: JSON.stringify(body),
         })
@@ -131,7 +131,9 @@ export default function Transactions() {
     try {
       setDeletingId(deleteTarget)
       setError('')
-      await apiFetch(`/transactions/${deleteTarget}`, { method: 'DELETE' })
+      await apiFetch(`/api/transactions/${deleteTarget}`, {
+        method: 'DELETE',
+      })
       setTransactions((prev) => prev.filter((tx) => tx._id !== deleteTarget))
       toast.success('Transaction deleted')
       setDeleteTarget(null)

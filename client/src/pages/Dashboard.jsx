@@ -23,8 +23,8 @@ export default function Dashboard() {
       setError('')
 
       const [txData, invData] = await Promise.all([
-        apiFetch('/transactions'),
-        apiFetch('/invoices'),
+        apiFetch('/api/transactions'),
+        apiFetch('/api/invoices'),
       ])
 
       setTransactions(txData)

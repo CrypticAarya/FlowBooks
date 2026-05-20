@@ -36,7 +36,7 @@ export default function Invoices() {
     try {
       setLoading(true)
       setError('')
-      const data = await apiFetch('/invoices')
+      const data = await apiFetch('/api/invoices')
       setInvoices(data)
     } catch (err) {
       setError(err.message)
@@ -97,7 +97,7 @@ export default function Invoices() {
 
     try {
       if (editingId) {
-        const updated = await apiFetch(`/invoices/${editingId}`, {
+        const updated = await apiFetch(`/api/invoices/${editingId}`, {
           method: 'PUT',
           body: JSON.stringify(body),
         })
@@ -106,7 +106,7 @@ export default function Invoices() {
         )
         toast.success('Invoice updated')
       } else {
-        const created = await apiFetch('/invoices', {
+        const created = await apiFetch('/api/invoices', {
           method: 'POST',
           body: JSON.stringify(body),
         })
@@ -131,7 +131,9 @@ export default function Invoices() {
     try {
       setDeletingId(deleteTarget)
       setError('')
-      await apiFetch(`/invoices/${deleteTarget}`, { method: 'DELETE' })
+      await apiFetch(`/api/invoices/${deleteTarget}`, {
+        method: 'DELETE',
+      })
       setInvoices((prev) => prev.filter((inv) => inv._id !== deleteTarget))
       toast.success('Invoice deleted')
       setDeleteTarget(null)
