@@ -1,8 +1,8 @@
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 import User from '../models/User.js'
+import { validateRegister, validateLogin } from '../utils/validators.js'
 
-// Create JWT token
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' })
 }
@@ -11,17 +11,22 @@ const generateToken = (id) => {
 export const register = async (req, res) => {
   try {
     const { name, email, password } = req.body
+    const { valid, errors } = validateRegister({ name, email, password })
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: 'Please fill all fields' })
+    if (!valid) {
+      return res.status(400).json({ message: 'Validation failed', errors })
     }
 
-    const exists = await User.findOne({ email })
+    const exists = await User.findOne({ email: email.toLowerCase().trim() })
     if (exists) {
       return res.status(400).json({ message: 'Email already registered' })
     }
 
-    const user = await User.create({ name, email, password })
+    const user = await User.create({
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
+      password,
+    })
     const token = generateToken(user._id)
 
     res.status(201).json({
@@ -37,12 +42,13 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body
+    const { valid, errors } = validateLogin({ email, password })
 
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Please enter email and password' })
+    if (!valid) {
+      return res.status(400).json({ message: 'Validation failed', errors })
     }
 
-    const user = await User.findOne({ email })
+    const user = await User.findOne({ email: email.toLowerCase().trim() })
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password' })
     }
