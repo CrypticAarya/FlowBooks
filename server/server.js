@@ -1,22 +1,20 @@
 import cors from 'cors'
 import express from 'express'
 import dotenv from 'dotenv'
+
 import connectDB from './config/db.js'
+
 import authRoutes from './routes/authRoutes.js'
 import transactionRoutes from './routes/transactionRoutes.js'
 import invoiceRoutes from './routes/invoiceRoutes.js'
 
 dotenv.config()
+
 connectDB()
 
 const app = express()
-const PORT = process.env.PORT || 5000
 
-// Allow local dev + deployed Vercel frontend
-const corsOptions = {
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
-  credentials: true,
-}
+const PORT = process.env.PORT || 5000
 
 app.use(
   cors({
@@ -27,10 +25,14 @@ app.use(
     credentials: true,
   })
 )
+
 app.use(express.json())
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, message: 'FlowBooks API is running' })
+  res.json({
+    ok: true,
+    message: 'FlowBooks API is running',
+  })
 })
 
 app.use('/api/auth', authRoutes)
