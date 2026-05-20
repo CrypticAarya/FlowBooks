@@ -9,17 +9,24 @@ import { validateLogin, inputClass } from '../utils/validation'
 
 export default function Login() {
   const navigate = useNavigate()
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
     setError('')
 
-    const errors = validateLogin({ email, password })
+    const errors = validateLogin({
+      email,
+      password,
+    })
+
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors)
       return
@@ -29,17 +36,27 @@ export default function Login() {
     setLoading(true)
 
     try {
-      const data = await apiFetch('/auth/login', {
+      const data = await apiFetch('/api/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email,
+          password,
+        }),
       })
+
       setAuth(data.token, data.user)
+
       toast.success('Welcome back!')
+
       navigate('/dashboard')
     } catch (err) {
       setError(err.message)
+
       toast.error(err.message)
-      if (err.errors) setFieldErrors(err.errors)
+
+      if (err.errors) {
+        setFieldErrors(err.errors)
+      }
     } finally {
       setLoading(false)
     }
@@ -48,18 +65,30 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-card border border-border rounded-xl p-8 shadow-glow">
-        <h1 className="text-2xl font-semibold text-white">FlowBooks</h1>
-        <p className="text-sm text-muted mt-2">Sign in to your account</p>
+        <h1 className="text-2xl font-semibold text-white">
+          FlowBooks
+        </h1>
+
+        <p className="text-sm text-muted mt-2">
+          Sign in to your account
+        </p>
 
         <div className="mt-4">
           <ErrorBox message={error} />
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <form
+          onSubmit={handleSubmit}
+          className="mt-6 space-y-4"
+        >
           <div>
-            <label htmlFor="email" className="block text-sm text-muted mb-1.5">
+            <label
+              htmlFor="email"
+              className="block text-sm text-muted mb-1.5"
+            >
               Email
             </label>
+
             <input
               id="email"
               type="email"
@@ -68,13 +97,18 @@ export default function Login() {
               placeholder="you@company.com"
               className={inputClass(fieldErrors.email)}
             />
+
             <FieldError message={fieldErrors.email} />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm text-muted mb-1.5">
+            <label
+              htmlFor="password"
+              className="block text-sm text-muted mb-1.5"
+            >
               Password
             </label>
+
             <input
               id="password"
               type="password"
@@ -83,6 +117,7 @@ export default function Login() {
               placeholder="••••••••"
               className={inputClass(fieldErrors.password)}
             />
+
             <FieldError message={fieldErrors.password} />
           </div>
 
@@ -97,7 +132,10 @@ export default function Login() {
 
         <p className="text-sm text-muted text-center mt-6">
           No account yet?{' '}
-          <Link to="/register" className="text-accent hover:underline">
+          <Link
+            to="/register"
+            className="text-accent hover:underline"
+          >
             Create one
           </Link>
         </p>

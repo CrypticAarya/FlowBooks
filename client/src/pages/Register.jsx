@@ -9,18 +9,26 @@ import { validateRegister, inputClass } from '../utils/validation'
 
 export default function Register() {
   const navigate = useNavigate()
+
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
     setError('')
 
-    const errors = validateRegister({ name, email, password })
+    const errors = validateRegister({
+      name,
+      email,
+      password,
+    })
+
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors)
       return
@@ -30,17 +38,28 @@ export default function Register() {
     setLoading(true)
 
     try {
-      const data = await apiFetch('/auth/register', {
+      const data = await apiFetch('/api/auth/register', {
         method: 'POST',
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+        }),
       })
+
       setAuth(data.token, data.user)
+
       toast.success('Account created!')
+
       navigate('/dashboard')
     } catch (err) {
       setError(err.message)
+
       toast.error(err.message)
-      if (err.errors) setFieldErrors(err.errors)
+
+      if (err.errors) {
+        setFieldErrors(err.errors)
+      }
     } finally {
       setLoading(false)
     }
@@ -49,18 +68,30 @@ export default function Register() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-card border border-border rounded-xl p-8 shadow-glow">
-        <h1 className="text-2xl font-semibold text-white">FlowBooks</h1>
-        <p className="text-sm text-muted mt-2">Create your account</p>
+        <h1 className="text-2xl font-semibold text-white">
+          FlowBooks
+        </h1>
+
+        <p className="text-sm text-muted mt-2">
+          Create your account
+        </p>
 
         <div className="mt-4">
           <ErrorBox message={error} />
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <form
+          onSubmit={handleSubmit}
+          className="mt-6 space-y-4"
+        >
           <div>
-            <label htmlFor="name" className="block text-sm text-muted mb-1.5">
+            <label
+              htmlFor="name"
+              className="block text-sm text-muted mb-1.5"
+            >
               Full name
             </label>
+
             <input
               id="name"
               type="text"
@@ -69,13 +100,18 @@ export default function Register() {
               placeholder="Jane Doe"
               className={inputClass(fieldErrors.name)}
             />
+
             <FieldError message={fieldErrors.name} />
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-sm text-muted mb-1.5">
+            <label
+              htmlFor="email"
+              className="block text-sm text-muted mb-1.5"
+            >
               Email
             </label>
+
             <input
               id="email"
               type="email"
@@ -84,13 +120,18 @@ export default function Register() {
               placeholder="you@company.com"
               className={inputClass(fieldErrors.email)}
             />
+
             <FieldError message={fieldErrors.email} />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm text-muted mb-1.5">
+            <label
+              htmlFor="password"
+              className="block text-sm text-muted mb-1.5"
+            >
               Password
             </label>
+
             <input
               id="password"
               type="password"
@@ -99,6 +140,7 @@ export default function Register() {
               placeholder="••••••••"
               className={inputClass(fieldErrors.password)}
             />
+
             <FieldError message={fieldErrors.password} />
           </div>
 
@@ -107,13 +149,18 @@ export default function Register() {
             disabled={loading}
             className="w-full mt-2 bg-accent text-background text-sm font-medium py-2.5 rounded-lg hover:brightness-110 disabled:opacity-50"
           >
-            {loading ? 'Creating account...' : 'Create account'}
+            {loading
+              ? 'Creating account...'
+              : 'Create account'}
           </button>
         </form>
 
         <p className="text-sm text-muted text-center mt-6">
           Already have an account?{' '}
-          <Link to="/login" className="text-accent hover:underline">
+          <Link
+            to="/login"
+            className="text-accent hover:underline"
+          >
             Sign in
           </Link>
         </p>
