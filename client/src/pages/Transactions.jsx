@@ -1,17 +1,32 @@
 import { useEffect, useState } from 'react'
+import toast from 'react-hot-toast'
 import Modal from '../components/Modal'
+import ConfirmModal from '../components/ConfirmModal'
+import SearchFilterBar from '../components/SearchFilterBar'
 import TransactionTable from '../components/TransactionTable'
+import ErrorBox from '../components/ErrorBox'
+import LoadingSpinner from '../components/LoadingSpinner'
+import FieldError from '../components/FieldError'
 import { apiFetch } from '../utils/api'
+import { validateTransaction, inputClass } from '../utils/validation'
+import { formatDate } from '../utils/format'
 
 export default function Transactions() {
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
+  const [editingId, setEditingId] = useState(null)
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')
   const [type, setType] = useState('Income')
+  const [date, setDate] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
   const [saving, setSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [search, setSearch] = useState('')
+  const [typeFilter, setTypeFilter] = useState('All')
 
   useEffect(() => {
     loadTransactions()
@@ -25,6 +40,7 @@ export default function Transactions() {
       setTransactions(data)
     } catch (err) {
       setError(err.message)
+      toast.error(err.message)
     } finally {
       setLoading(false)
     }
@@ -34,6 +50,24 @@ export default function Transactions() {
     setDescription('')
     setAmount('')
     setType('Income')
+    setDate(new Date().toISOString().slice(0, 10))
+    setFieldErrors({})
+    setEditingId(null)
+  }
+
+  const openAdd = () => {
+    resetForm()
+    setModalOpen(true)
+  }
+
+  const openEdit = (tx) => {
+    setEditingId(tx._id)
+    setDescription(tx.description)
+    setAmount(String(tx.amount))
+    setType(tx.type)
+    setDate(formatDate(tx.date))
+    setFieldErrors({})
+    setModalOpen(true)
   }
 
   const handleClose = () => {
@@ -43,37 +77,87 @@ export default function Transactions() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setError('')
+
+    const errors = validateTransaction({ description, amount, type })
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      return
+    }
+
+    setFieldErrors({})
     setSaving(true)
 
+    const body = {
+      description,
+      amount: Number(amount),
+      type,
+      date: date ? new Date(date).toISOString() : new Date().toISOString(),
+    }
+
     try {
-      const created = await apiFetch('/transactions', {
-        method: 'POST',
-        body: JSON.stringify({
-          description,
-          amount: Number(amount),
-          type,
-          date: new Date().toISOString(),
-        }),
-      })
-      setTransactions((prev) => [created, ...prev])
+      if (editingId) {
+        const updated = await apiFetch(`/transactions/${editingId}`, {
+          method: 'PUT',
+          body: JSON.stringify(body),
+        })
+        setTransactions((prev) =>
+          prev.map((tx) => (tx._id === editingId ? updated : tx))
+        )
+        toast.success('Transaction updated')
+      } else {
+        const created = await apiFetch('/transactions', {
+          method: 'POST',
+          body: JSON.stringify(body),
+        })
+        setTransactions((prev) => [created, ...prev])
+        toast.success('Transaction added')
+      }
       handleClose()
     } catch (err) {
       setError(err.message)
+      toast.error(err.message)
+      if (err.errors) setFieldErrors(err.errors)
     } finally {
       setSaving(false)
     }
   }
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this transaction?')) return
+  const requestDelete = (id) => setDeleteTarget(id)
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
 
     try {
-      await apiFetch(`/transactions/${id}`, { method: 'DELETE' })
-      setTransactions((prev) => prev.filter((tx) => tx._id !== id))
+      setDeletingId(deleteTarget)
+      setError('')
+      await apiFetch(`/transactions/${deleteTarget}`, { method: 'DELETE' })
+      setTransactions((prev) => prev.filter((tx) => tx._id !== deleteTarget))
+      toast.success('Transaction deleted')
+      setDeleteTarget(null)
     } catch (err) {
       setError(err.message)
+      toast.error(err.message)
+    } finally {
+      setDeletingId(null)
     }
   }
+
+  const filteredTransactions = transactions.filter((tx) => {
+    const matchesSearch = tx.description
+      .toLowerCase()
+      .includes(search.toLowerCase().trim())
+    const matchesType = typeFilter === 'All' || tx.type === typeFilter
+    return matchesSearch && matchesType
+  })
+
+  const hasNoData = transactions.length === 0
+  const emptyTitle = hasNoData
+    ? 'No transactions yet'
+    : 'No matching transactions found'
+  const emptyDescription = hasNoData
+    ? 'Start by adding your first transaction'
+    : 'Try a different search or filter'
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -84,24 +168,47 @@ export default function Transactions() {
         </div>
         <button
           type="button"
-          onClick={() => setModalOpen(true)}
-          className="bg-accent text-background text-sm font-medium px-4 py-2.5 rounded-lg hover:brightness-110"
+          onClick={openAdd}
+          className="w-full sm:w-auto bg-accent text-background text-sm font-medium px-4 py-2.5 rounded-lg hover:brightness-110"
         >
           Add Transaction
         </button>
       </div>
 
-      {error && (
-        <p className="text-sm text-red-400">{error}</p>
-      )}
+      <ErrorBox message={error} />
 
       {loading ? (
-        <p className="text-muted text-sm">Loading transactions...</p>
+        <LoadingSpinner text="Loading transactions..." />
       ) : (
-        <TransactionTable transactions={transactions} onDelete={handleDelete} />
+        <div className="space-y-4">
+          <SearchFilterBar
+            search={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Search transactions..."
+            filter={typeFilter}
+            onFilterChange={setTypeFilter}
+            filterOptions={[
+              { value: 'All', label: 'All' },
+              { value: 'Income', label: 'Income' },
+              { value: 'Expense', label: 'Expense' },
+            ]}
+          />
+          <TransactionTable
+            transactions={filteredTransactions}
+            onEdit={openEdit}
+            onDelete={requestDelete}
+            deletingId={deletingId}
+            emptyTitle={emptyTitle}
+            emptyDescription={emptyDescription}
+          />
+        </div>
       )}
 
-      <Modal isOpen={modalOpen} onClose={handleClose} title="Add Transaction">
+      <Modal
+        isOpen={modalOpen}
+        onClose={handleClose}
+        title={editingId ? 'Edit Transaction' : 'Add Transaction'}
+      >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="tx-description" className="block text-sm text-muted mb-1.5">
@@ -112,9 +219,9 @@ export default function Transactions() {
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-accent"
-              required
+              className={inputClass(fieldErrors.description)}
             />
+            <FieldError message={fieldErrors.description} />
           </div>
 
           <div>
@@ -128,9 +235,9 @@ export default function Transactions() {
               step="0.01"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-accent"
-              required
+              className={inputClass(fieldErrors.amount)}
             />
+            <FieldError message={fieldErrors.amount} />
           </div>
 
           <div>
@@ -141,11 +248,25 @@ export default function Transactions() {
               id="tx-type"
               value={type}
               onChange={(e) => setType(e.target.value)}
-              className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-accent"
+              className={inputClass(fieldErrors.type)}
             >
               <option value="Income">Income</option>
               <option value="Expense">Expense</option>
             </select>
+            <FieldError message={fieldErrors.type} />
+          </div>
+
+          <div>
+            <label htmlFor="tx-date" className="block text-sm text-muted mb-1.5">
+              Date
+            </label>
+            <input
+              id="tx-date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className={inputClass(false)}
+            />
           </div>
 
           <button
@@ -153,10 +274,19 @@ export default function Transactions() {
             disabled={saving}
             className="w-full bg-accent text-background text-sm font-medium py-2.5 rounded-lg hover:brightness-110 disabled:opacity-50"
           >
-            {saving ? 'Saving...' : 'Save Transaction'}
+            {saving ? 'Saving...' : editingId ? 'Update Transaction' : 'Save Transaction'}
           </button>
         </form>
       </Modal>
+
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        title="Delete transaction?"
+        message="This action cannot be undone."
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+        loading={!!deletingId}
+      />
     </div>
   )
 }

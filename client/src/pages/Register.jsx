@@ -1,7 +1,11 @@
 import { useState } from 'react'
+import toast from 'react-hot-toast'
 import { Link, useNavigate } from 'react-router-dom'
+import ErrorBox from '../components/ErrorBox'
+import FieldError from '../components/FieldError'
 import { apiFetch } from '../utils/api'
 import { setAuth } from '../utils/auth'
+import { validateRegister, inputClass } from '../utils/validation'
 
 export default function Register() {
   const navigate = useNavigate()
@@ -9,11 +13,20 @@ export default function Register() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+
+    const errors = validateRegister({ name, email, password })
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      return
+    }
+
+    setFieldErrors({})
     setLoading(true)
 
     try {
@@ -22,9 +35,12 @@ export default function Register() {
         body: JSON.stringify({ name, email, password }),
       })
       setAuth(data.token, data.user)
+      toast.success('Account created!')
       navigate('/dashboard')
     } catch (err) {
       setError(err.message)
+      toast.error(err.message)
+      if (err.errors) setFieldErrors(err.errors)
     } finally {
       setLoading(false)
     }
@@ -36,13 +52,11 @@ export default function Register() {
         <h1 className="text-2xl font-semibold text-white">FlowBooks</h1>
         <p className="text-sm text-muted mt-2">Create your account</p>
 
-        {error && (
-          <p className="mt-4 text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
-            {error}
-          </p>
-        )}
+        <div className="mt-4">
+          <ErrorBox message={error} />
+        </div>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
             <label htmlFor="name" className="block text-sm text-muted mb-1.5">
               Full name
@@ -53,9 +67,9 @@ export default function Register() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Jane Doe"
-              className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-accent"
-              required
+              className={inputClass(fieldErrors.name)}
             />
+            <FieldError message={fieldErrors.name} />
           </div>
 
           <div>
@@ -68,9 +82,9 @@ export default function Register() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@company.com"
-              className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-accent"
-              required
+              className={inputClass(fieldErrors.email)}
             />
+            <FieldError message={fieldErrors.email} />
           </div>
 
           <div>
@@ -83,10 +97,9 @@ export default function Register() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              minLength={6}
-              className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-accent"
-              required
+              className={inputClass(fieldErrors.password)}
             />
+            <FieldError message={fieldErrors.password} />
           </div>
 
           <button

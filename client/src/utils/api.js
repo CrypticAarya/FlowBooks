@@ -2,7 +2,6 @@ import { getToken } from './auth'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
-// Simple fetch helper — sends JSON + JWT when logged in
 export async function apiFetch(path, options = {}) {
   const headers = {
     'Content-Type': 'application/json',
@@ -14,15 +13,28 @@ export async function apiFetch(path, options = {}) {
     headers.Authorization = `Bearer ${token}`
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers,
-  })
+  let response
 
-  const data = await response.json()
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers,
+    })
+  } catch {
+    throw new Error('Network error. Make sure the server is running.')
+  }
+
+  let data = {}
+  try {
+    data = await response.json()
+  } catch {
+    data = { message: 'Unexpected server response' }
+  }
 
   if (!response.ok) {
-    throw new Error(data.message || 'Something went wrong')
+    const error = new Error(data.message || 'Something went wrong')
+    error.errors = data.errors || null
+    throw error
   }
 
   return data

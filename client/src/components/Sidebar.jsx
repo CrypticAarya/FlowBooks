@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { getUser, logout } from '../utils/auth'
 
@@ -52,6 +53,7 @@ export default function Sidebar({ isOpen, onClose }) {
         type="button"
         onClick={() => {
           logout()
+          toast.success('Logged out')
           onClose?.()
           navigate('/login')
         }}
