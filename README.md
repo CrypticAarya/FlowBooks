@@ -1,5 +1,7 @@
 # 📊 FlowBooks — B2B SaaS Financial & Invoicing Dashboard
 
+**[🚀 View Live Demo: flow-books.vercel.app](https://flow-books.vercel.app)**
+
 FlowBooks is a modern, high-density **B2B SaaS financial ledger and invoice management platform** designed for freelancers, agency owners, and growing startups. Crafted with a premium Vercel/Stripe-inspired dark aesthetic, FlowBooks delivers real-time visual insights, responsive transaction tracking, and interactive statement generation through a clean, developer-friendly architecture.
 
 ---
