@@ -1,5 +1,5 @@
-import express from 'express'
 import cors from 'cors'
+import express from 'express'
 import dotenv from 'dotenv'
 import connectDB from './config/db.js'
 import authRoutes from './routes/authRoutes.js'
@@ -18,7 +18,15 @@ const corsOptions = {
   credentials: true,
 }
 
-app.use(cors(corsOptions))
+app.use(
+  cors({
+    origin: [
+      'http://localhost:5173',
+      'https://flow-books-19aq.vercel.app',
+    ],
+    credentials: true,
+  })
+)
 app.use(express.json())
 
 app.get('/api/health', (_req, res) => {
