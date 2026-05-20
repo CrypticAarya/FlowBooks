@@ -7,15 +7,17 @@ import {
   deleteInvoice 
 } from '../controllers/invoiceController.js';
 
+import { protect } from '../middleware/authMiddleware.js';
+
 const router = express.Router();
 
 router.route('/')
-  .get(getInvoices)
-  .post(createInvoice);
+  .get(protect, getInvoices)
+  .post(protect, createInvoice);
 
 router.route('/:id')
-  .get(getInvoiceById)
-  .put(updateInvoice)
-  .delete(deleteInvoice);
+  .get(protect, getInvoiceById)
+  .put(protect, updateInvoice)
+  .delete(protect, deleteInvoice);
 
 export default router;

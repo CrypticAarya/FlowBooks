@@ -4,7 +4,17 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import InvoicesPage from './pages/InvoicesPage';
+import ExpensesPage from './pages/ExpensesPage';
+import CustomersPage from './pages/CustomersPage';
+import PaymentsPage from './pages/PaymentsPage';
+import NotificationsPage from './pages/NotificationsPage';
+import SettingsPage from './pages/SettingsPage';
+import SubscriptionPage from './pages/SubscriptionPage';
+import InsightsPage from './pages/InsightsPage';
+import ReportsPage from './pages/ReportsPage';
+import ProtectedRoute from './components/ProtectedRoute';
 import Toast from './components/ui/Toast';
 
 export default function App() {
@@ -61,47 +71,6 @@ export default function App() {
     }, 100);
   };
 
-// Premium custom placeholder view for clean SaaS routes
-function PlaceholderView({ tab }) {
-  const navigate = useNavigate();
-  const subpageDetails = {
-    invoices: { title: 'Billing & Invoices', desc: 'Create, edit, and track outgoing client statements.', icon: '🧾' },
-    expenses: { title: 'Operational Expenses', desc: 'Track spend categories, recurring fees, and SaaS tool expenses.', icon: '💸' },
-    customers: { title: 'Customers Directory', desc: 'Manage your client profiles and lifetime customer values (LTV).', icon: '👥' },
-    settings: { title: 'Settings', desc: 'Adjust payment integrations, invoice layouts, and account defaults.', icon: '⚙️' },
-  };
-
-  const details = subpageDetails[tab] || { title: 'Page', desc: 'Module loading...', icon: '⚙️' };
-
-  return (
-    <div className="flex flex-col gap-6 animate-fade-in">
-      <div>
-        <h1 className="font-display text-xl md:text-2xl font-extrabold text-white tracking-tight">
-          {details.title}
-        </h1>
-        <p className="text-xs text-zinc-450 mt-1">
-          {details.desc}
-        </p>
-      </div>
-
-      <div className="bg-[#121214] border border-zinc-800 rounded-xl p-8 sm:p-12 md:p-16 shadow-sm flex flex-col items-center gap-5 text-center mt-4">
-        <span className="text-5xl animate-bounce">{details.icon}</span>
-        <h2 className="font-display text-base font-bold text-white">
-          {details.title} Sub-System
-        </h2>
-        <p className="text-xs text-zinc-400 max-w-sm leading-relaxed">
-          This sub-system has been completely connected to modern react-router-dom routes. Edit this view directly inside App.jsx or extract it as your application expands.
-        </p>
-        <button
-          className="mt-2 bg-white hover:bg-zinc-200 text-black border-none rounded-lg px-5 py-2.5 text-xs font-semibold shadow-md transition-all cursor-pointer"
-          onClick={() => navigate('/dashboard')}
-        >
-          ← Back to Dashboard Hub
-        </button>
-      </div>
-    </div>
-  );
-}
 
   if (activeTab === 'login') {
     return (
@@ -110,6 +79,26 @@ function PlaceholderView({ tab }) {
           setActiveTab('dashboard');
           triggerToast('Welcome back, Jane! Logged in successfully.', 'success');
         }} />
+        
+        {/* Floating Animated Toast Container */}
+        <div className="toast-container">
+          {toasts.map((toast) => (
+            <Toast
+              key={toast.id}
+              message={toast.message}
+              type={toast.type}
+              onClose={() => removeToast(toast.id)}
+            />
+          ))}
+        </div>
+      </>
+    );
+  }
+
+  if (activeTab === 'register') {
+    return (
+      <>
+        <Register />
         
         {/* Floating Animated Toast Container */}
         <div className="toast-container">
@@ -154,18 +143,25 @@ function PlaceholderView({ tab }) {
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               
               <Route path="/dashboard" element={
-                <Dashboard
-                  searchQuery={searchQuery}
-                  triggerToast={triggerToast}
-                  quickInvoiceRef={quickInvoiceRef}
-                />
+                <ProtectedRoute>
+                  <Dashboard
+                    searchQuery={searchQuery}
+                    triggerToast={triggerToast}
+                    quickInvoiceRef={quickInvoiceRef}
+                  />
+                </ProtectedRoute>
               } />
               
               {/* Real Invoices Management view */}
-              <Route path="/invoices" element={<InvoicesPage />} />
-              <Route path="/expenses" element={<PlaceholderView tab="expenses" />} />
-              <Route path="/customers" element={<PlaceholderView tab="customers" />} />
-              <Route path="/settings" element={<PlaceholderView tab="settings" />} />
+              <Route path="/invoices" element={<ProtectedRoute><InvoicesPage /></ProtectedRoute>} />
+              <Route path="/payments" element={<ProtectedRoute><PaymentsPage /></ProtectedRoute>} />
+              <Route path="/expenses" element={<ProtectedRoute><ExpensesPage /></ProtectedRoute>} />
+              <Route path="/customers" element={<ProtectedRoute><CustomersPage /></ProtectedRoute>} />
+              <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+              <Route path="/insights" element={<ProtectedRoute><InsightsPage /></ProtectedRoute>} />
+              <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+              <Route path="/subscription" element={<ProtectedRoute><SubscriptionPage /></ProtectedRoute>} />
               
               {/* Missing paths redirect back to central dashboard view */}
               <Route path="*" element={<Navigate to="/dashboard" replace />} />

@@ -20,13 +20,24 @@ export default function InvoicesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [invoiceToEdit, setInvoiceToEdit] = useState(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [invoiceToDelete, setInvoiceToDelete] = useState(null);
   const [form] = Form.useForm();
+  const [editForm] = Form.useForm();
+
+  // Helper to generate Authorization headers for JWT protected backend
+  const getAuthConfig = () => {
+    const token = localStorage.getItem('flowbooks_token');
+    return { headers: { Authorization: `Bearer ${token}` } };
+  };
 
   // Fetch Invoices from Express + MongoDB backend
   const fetchInvoices = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(API_URL);
+      const response = await axios.get(API_URL, getAuthConfig());
       if (response.data && response.data.success) {
         setInvoices(response.data.data);
         setError(null);
@@ -76,7 +87,7 @@ export default function InvoicesPage() {
         status: values.status || 'pending',
       };
 
-      const response = await axios.post(API_URL, payload);
+      const response = await axios.post(API_URL, payload, getAuthConfig());
       if (response.data && response.data.success) {
         setInvoices([response.data.data, ...invoices]);
         message.success(`Successfully issued invoice ${payload.invoiceNumber} for $${payload.amount.toLocaleString()}!`);
@@ -89,18 +100,82 @@ export default function InvoicesPage() {
     }
   };
 
+  // Handle opening Edit Modal & prefilling data
+  const showEditModal = (invoice) => {
+    setInvoiceToEdit(invoice);
+    editForm.setFieldsValue({
+      client: invoice.clientName,
+      project: invoice.project,
+      amount: invoice.amount,
+      status: invoice.status,
+      due: invoice.dueDate,
+    });
+    setIsEditModalOpen(true);
+  };
+
+  // Handle Edit Form Submission inside modal
+  const handleEditInvoice = async (values) => {
+    try {
+      if (!invoiceToEdit) return;
+
+      const payload = {
+        clientName: values.client,
+        project: values.project || 'General Consulting',
+        amount: parseFloat(values.amount),
+        dueDate: values.due,
+        status: values.status,
+      };
+
+      const response = await axios.put(`${API_URL}/${invoiceToEdit._id}`, payload, getAuthConfig());
+      if (response.data && response.data.success) {
+        message.success(`Successfully updated invoice ${invoiceToEdit.invoiceNumber}!`);
+        await fetchInvoices();
+      }
+      setIsEditModalOpen(false);
+      setInvoiceToEdit(null);
+      editForm.resetFields();
+    } catch (err) {
+      console.error('Failed to update invoice:', err);
+      message.error(err.response?.data?.message || 'Failed to update invoice statement.');
+    }
+  };
+
   // Handle Deleting an Invoice from live backend
   const handleDeleteInvoice = async (id, invoiceNumber) => {
     try {
-      const response = await axios.delete(`${API_URL}/${id}`);
+      setLoading(true);
+      const response = await axios.delete(`${API_URL}/${id}`, getAuthConfig());
       if (response.data && response.data.success) {
-        setInvoices(invoices.filter(i => i._id !== id));
         message.success(`Invoice ${invoiceNumber} deleted successfully.`);
+        await fetchInvoices();
+      } else {
+        message.error('Failed to delete invoice.');
       }
     } catch (err) {
       console.error('Failed to remove invoice:', err);
-      message.error('Failed to remove invoice statement.');
+      message.error(err.response?.data?.message || 'Failed to delete invoice.');
+      setLoading(false);
     }
+  };
+
+  // Confirm deletion before proceeding
+  const showDeleteConfirm = (id, invoiceNumber) => {
+    setInvoiceToDelete({ _id: id, invoiceNumber });
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (invoiceToDelete) {
+      const { _id, invoiceNumber } = invoiceToDelete;
+      setIsDeleteModalOpen(false);
+      setInvoiceToDelete(null);
+      await handleDeleteInvoice(_id, invoiceNumber);
+    }
+  };
+
+  const cancelDelete = () => {
+    setIsDeleteModalOpen(false);
+    setInvoiceToDelete(null);
   };
 
   const columns = [
@@ -182,8 +257,14 @@ export default function InvoicesPage() {
             View
           </button>
           <button
+            className="text-xs text-amber-400 hover:text-amber-350 font-semibold cursor-pointer border-none bg-transparent"
+            onClick={() => showEditModal(record)}
+          >
+            Edit
+          </button>
+          <button
             className="text-xs text-rose-500 hover:text-rose-450 font-semibold cursor-pointer border-none bg-transparent"
-            onClick={() => handleDeleteInvoice(record._id, record.invoiceNumber)}
+            onClick={() => showDeleteConfirm(record._id, record.invoiceNumber)}
           >
             Delete
           </button>
@@ -451,6 +532,156 @@ export default function InvoicesPage() {
             </Button>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Premium Edit Invoice Modal */}
+      <Modal
+        title={<span className="text-white font-bold font-display text-base">Edit Invoice Statement</span>}
+        open={isEditModalOpen}
+        onCancel={() => {
+          setIsEditModalOpen(false);
+          setInvoiceToEdit(null);
+          editForm.resetFields();
+        }}
+        footer={null}
+        closeIcon={<CloseOutlined className="text-zinc-500 hover:text-white" />}
+        className="custom-dark-modal"
+        centered
+        width={420}
+      >
+        <Form
+          form={editForm}
+          layout="vertical"
+          onFinish={handleEditInvoice}
+          requiredMark={false}
+          className="flex flex-col gap-4 mt-2"
+        >
+          {/* Client input */}
+          <Form.Item
+            name="client"
+            label={<span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Client Name</span>}
+            rules={[{ required: true, message: 'Please provide a client name' }]}
+            style={{ marginBottom: '12px' }}
+          >
+            <Input
+              placeholder="e.g. Supabase Inc"
+              style={{ backgroundColor: '#18181b', borderColor: '#27272a', color: 'white', borderRadius: '8px', height: '38px', fontSize: '12px' }}
+            />
+          </Form.Item>
+
+          {/* Project input */}
+          <Form.Item
+            name="project"
+            label={<span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Project / Description</span>}
+            style={{ marginBottom: '12px' }}
+          >
+            <Input
+              placeholder="e.g. Database API Setup"
+              style={{ backgroundColor: '#18181b', borderColor: '#27272a', color: 'white', borderRadius: '8px', height: '38px', fontSize: '12px' }}
+            />
+          </Form.Item>
+
+          <div className="grid grid-cols-2 gap-4">
+            {/* Amount input */}
+            <Form.Item
+              name="amount"
+              label={<span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Amount ($)</span>}
+              rules={[{ required: true, message: 'Please specify an amount' }]}
+              style={{ marginBottom: '12px' }}
+            >
+              <Input
+                type="number"
+                min="1"
+                placeholder="2500"
+                style={{ backgroundColor: '#18181b', borderColor: '#27272a', color: 'white', borderRadius: '8px', height: '38px', fontSize: '12px' }}
+              />
+            </Form.Item>
+
+            {/* Status Selector */}
+            <Form.Item
+              name="status"
+              label={<span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Status</span>}
+              rules={[{ required: true, message: 'Please specify a status' }]}
+              style={{ marginBottom: '12px' }}
+            >
+              <Select
+                dropdownStyle={{ backgroundColor: '#121214', border: '1px solid #27272a' }}
+                style={{ height: '38px' }}
+              >
+                <Select.Option value="paid">Paid</Select.Option>
+                <Select.Option value="pending">Pending</Select.Option>
+                <Select.Option value="overdue">Overdue</Select.Option>
+              </Select>
+            </Form.Item>
+          </div>
+
+          {/* Due Date */}
+          <Form.Item
+            name="due"
+            label={<span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Due Date</span>}
+            rules={[{ required: true, message: 'Please specify a due date' }]}
+            style={{ marginBottom: '16px' }}
+          >
+            <input
+              type="date"
+              className="w-full bg-[#18181b] border border-zinc-800 text-zinc-200 rounded-lg px-3 h-[38px] text-xs outline-none focus:border-indigo-500"
+            />
+          </Form.Item>
+
+          {/* Action trigger button */}
+          <Form.Item style={{ marginBottom: 0 }}>
+            <Button
+              type="primary"
+              htmlType="submit"
+              block
+              style={{
+                backgroundColor: 'white',
+                borderColor: 'white',
+                color: 'black',
+                fontWeight: 650,
+                borderRadius: '8px',
+                height: '40px',
+                fontSize: '12px',
+                boxShadow: '0 4px 12px rgba(255, 255, 255, 0.1)'
+              }}
+            >
+              Save Changes
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Premium Delete Confirmation Modal */}
+      <Modal
+        title={<span className="text-white font-bold font-display text-base">Delete Invoice</span>}
+        open={isDeleteModalOpen}
+        onCancel={cancelDelete}
+        footer={null}
+        closeIcon={<CloseOutlined className="text-zinc-500 hover:text-white" />}
+        className="custom-dark-modal"
+        centered
+        width={380}
+      >
+        <div className="flex flex-col gap-4 mt-2">
+          <p className="text-xs text-zinc-400 leading-relaxed">
+            Are you sure you want to delete invoice <strong className="text-zinc-250">{invoiceToDelete?.invoiceNumber}</strong>? This action is permanent and cannot be undone.
+          </p>
+
+          <div className="flex justify-end gap-3 mt-2">
+            <button
+              className="px-4 py-2 rounded-lg text-xs font-semibold bg-[#18181b] hover:bg-[#27272a] text-zinc-400 hover:text-zinc-250 border border-zinc-800 transition-all cursor-pointer"
+              onClick={cancelDelete}
+            >
+              Cancel
+            </button>
+            <button
+              className="px-4 py-2 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white border-none transition-all cursor-pointer shadow-md shadow-rose-900/10"
+              onClick={confirmDelete}
+            >
+              Delete Invoice
+            </button>
+          </div>
+        </div>
       </Modal>
 
     </div>

@@ -5,7 +5,8 @@ import Invoice from '../models/Invoice.js';
 // @access  Public
 export const getInvoices = async (req, res, next) => {
   try {
-    const invoices = await Invoice.find().sort({ createdAt: -1 });
+    // Only fetch invoices that belong to the logged in user
+    const invoices = await Invoice.find({ user: req.user.id }).sort({ createdAt: -1 });
     res.status(200).json({
       success: true,
       count: invoices.length,
@@ -29,6 +30,14 @@ export const getInvoiceById = async (req, res, next) => {
       });
     }
 
+    // Make sure the logged in user is the owner
+    if (invoice.user.toString() !== req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Not authorized to view this invoice',
+      });
+    }
+
     res.status(200).json({
       success: true,
       data: invoice,
@@ -45,8 +54,8 @@ export const createInvoice = async (req, res, next) => {
   try {
     const { invoiceNumber, clientName, project, amount, dueDate, status } = req.body;
     
-    // Check if invoice number is already taken
-    const existingInvoice = await Invoice.findOne({ invoiceNumber });
+    // Check if invoice number is already taken for this specific user
+    const existingInvoice = await Invoice.findOne({ invoiceNumber, user: req.user.id });
     if (existingInvoice) {
       return res.status(400).json({
         success: false,
@@ -61,6 +70,7 @@ export const createInvoice = async (req, res, next) => {
       amount,
       dueDate,
       status,
+      user: req.user.id, // Attach the user to the invoice
     });
 
     res.status(201).json({
@@ -87,9 +97,17 @@ export const updateInvoice = async (req, res, next) => {
       });
     }
 
-    // Check unique constraint if invoiceNumber is changing
+    // Check ownership before updating
+    if (invoice.user.toString() !== req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Not authorized to update this invoice',
+      });
+    }
+
+    // Check unique constraint if invoiceNumber is changing for this user
     if (invoiceNumber && invoiceNumber !== invoice.invoiceNumber) {
-      const duplicate = await Invoice.findOne({ invoiceNumber });
+      const duplicate = await Invoice.findOne({ invoiceNumber, user: req.user.id });
       if (duplicate) {
         return res.status(400).json({
           success: false,
@@ -119,7 +137,10 @@ export const updateInvoice = async (req, res, next) => {
 // @access  Public
 export const deleteInvoice = async (req, res, next) => {
   try {
+    // Find the invoice first to check ownership
     const invoice = await Invoice.findById(req.params.id);
+    
+    // Return a 404 response if the invoice does not exist
     if (!invoice) {
       return res.status(404).json({
         success: false,
@@ -127,13 +148,24 @@ export const deleteInvoice = async (req, res, next) => {
       });
     }
 
+    // Verify ownership
+    if (invoice.user.toString() !== req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Not authorized to delete this invoice',
+      });
+    }
+
+    // Delete target invoice from MongoDB
     await invoice.deleteOne();
 
+    // Return the required success payload
     res.status(200).json({
       success: true,
-      message: 'Invoice removed successfully',
+      message: 'Invoice deleted successfully',
     });
   } catch (error) {
+    // Forward any unexpected errors to our global error handling middleware
     next(error);
   }
 };

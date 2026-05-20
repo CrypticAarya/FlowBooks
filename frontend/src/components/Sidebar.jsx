@@ -1,12 +1,18 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { message } from 'antd';
 import { 
   DashboardOutlined, 
   FileTextOutlined, 
   CreditCardOutlined, 
   UserOutlined, 
   SettingOutlined,
-  CloseOutlined
+  CloseOutlined,
+  BankOutlined,
+  BellOutlined,
+  CrownOutlined,
+  BulbOutlined,
+  BarChartOutlined
 } from '@ant-design/icons';
 
 export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab }) {
@@ -14,8 +20,13 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab }) 
   const menuItems = [
     { id: 'dashboard', path: '/dashboard', name: 'Dashboard', icon: <DashboardOutlined /> },
     { id: 'invoices', path: '/invoices', name: 'Invoices', icon: <FileTextOutlined /> },
+    { id: 'payments', path: '/payments', name: 'Payments', icon: <BankOutlined /> },
     { id: 'expenses', path: '/expenses', name: 'Expenses', icon: <CreditCardOutlined /> },
     { id: 'customers', path: '/customers', name: 'Customers', icon: <UserOutlined /> },
+    { id: 'insights', path: '/insights', name: 'AI Insights', icon: <BulbOutlined /> },
+    { id: 'reports', path: '/reports', name: 'Reports', icon: <BarChartOutlined /> },
+    { id: 'subscription', path: '/subscription', name: 'Plans', icon: <CrownOutlined /> },
+    { id: 'notifications', path: '/notifications', name: 'Activity', icon: <BellOutlined /> },
     { id: 'settings', path: '/settings', name: 'Settings', icon: <SettingOutlined /> },
   ];
 
@@ -96,6 +107,8 @@ export default function Sidebar({ isOpen, setIsOpen, activeTab, setActiveTab }) 
           </div>
           <button 
             onClick={() => {
+              localStorage.removeItem('flowbooks_token');
+              message.success('Logged out successfully');
               navigate('/login');
             }}
             className="text-zinc-500 hover:text-rose-450 p-1.5 rounded-lg hover:bg-rose-950/20 border-none bg-transparent transition-all cursor-pointer flex items-center justify-center"

@@ -158,20 +158,40 @@
 }
 
 /* Ant Design Modal & Select Dark Overrides */
+div.ant-modal-root div.ant-modal-wrap div.ant-modal div.ant-modal-content,
+.ant-modal-content,
 .custom-dark-modal .ant-modal-content {
   background-color: #121214 !important;
+  background: #121214 !important;
   border: 1px solid #27272a !important;
   color: white !important;
   border-radius: 16px !important;
 }
 
+div.ant-modal-root div.ant-modal-wrap div.ant-modal div.ant-modal-content div.ant-modal-header,
+.ant-modal-header,
 .custom-dark-modal .ant-modal-header {
   background-color: #121214 !important;
+  background: #121214 !important;
   margin-bottom: 16px !important;
+  border-bottom: none !important;
 }
 
-.custom-dark-modal .ant-modal-title {
+div.ant-modal-root div.ant-modal-wrap div.ant-modal div.ant-modal-content div.ant-modal-body,
+.ant-modal-body {
+  background-color: #121214 !important;
+  background: #121214 !important;
+}
+
+.custom-dark-modal .ant-modal-title,
+.ant-modal-confirm-title,
+.ant-modal-title {
   color: white !important;
+}
+
+.ant-modal-confirm-content,
+.ant-modal-body p {
+  color: #a1a1aa !important;
 }
 
 .custom-dark-modal .ant-form-item-label > label {
